@@ -6,6 +6,8 @@
 #PBS -N HiFiBamToFasta
 #PBS -j oe
 
+cd /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/
+
 # In order for this script to run, "conda create -n pbtk-env -c bioconda pbtk" has to be run previously.
 # From hifiasm: "Input sequences should be FASTA or FASTQ format, uncompressed or compressed with gzip (.gz). The quality scores of reads in FASTQ are ignored by hifiasm. Hifiasm outputs assemblies in GFA format."
 # As a result, bam2fasta was used instead of bam2fastq from pbtk
@@ -15,4 +17,4 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate pbtk-env
 
 # Convert HiFi bam to fasta (generates output with .fasta.gz)
-bam2fasta -o /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/maple_grove.hifi_reads --num-threads 64 /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/HudsonAlphaHiFi/m84238_250613_002528_s3.hifi_reads.bam
+bam2fasta -o maple_grove.hifi_reads --num-threads 64 ./HudsonAlphaHiFi/m84238_250613_002528_s3.hifi_reads.bam
