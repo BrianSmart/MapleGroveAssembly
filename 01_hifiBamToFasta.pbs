@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -q condo05
+#PBS -l select=1:ncpus=64:mem=500GB
+#PBS -l walltime=168:00:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N HiFiBamToFasta
+#PBS -j oe
+
+# In order for this script to run, "conda create -n pbtk-env -c bioconda pbtk" has to be run previously.
+# From hifiasm: "Input sequences should be FASTA or FASTQ format, uncompressed or compressed with gzip (.gz). The quality scores of reads in FASTQ are ignored by hifiasm. Hifiasm outputs assemblies in GFA format."
+# As a result, bam2fasta was used instead of bam2fastq from pbtk
+
+# Activate pbtk environment
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate pbtk-env
+
+# Convert HiFi bam to fasta
+bam2fasta -o /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/maple_grove.hifi_reads.fasta.gz --num-threads 64 /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/HudsonAlphaHiFi/m84238_250613_002528_s3.hifi_reads.bam
