@@ -1,0 +1,50 @@
+#!/bin/bash
+#PBS -q beta
+#PBS -l select=1:ncpus=36:mem=1509GB
+#PBS -l walltime=168:00:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N HifiasmMapleGroveAssembly
+#PBS -j oe
+
+##########################################################################
+##########################################################################
+# Set up hifiasm as a module on PBS-based HPC
+# Copy and uncomment the below 7 lines
+
+# 1. Define variables for version and paths
+#VERSION="0.25.0-r726"
+#SOFTWARE_BASE="/mmfs1/projects/brent.hulke/software"
+#MODULEFILES_DIR="${SOFTWARE_BASE}/modulefiles"
+
+# 2. Create a clean, versioned directory for the executable
+#mkdir -p ${SOFTWARE_BASE}/hifiasm/${VERSION}
+
+# 3. Copy the hifiasm executable into the new versioned directory
+#cp ${SOFTWARE_BASE}/hifiasm/hifiasm ${SOFTWARE_BASE}/hifiasm/${VERSION}/
+
+# 4. Create the directory structure for the modulefile
+#mkdir -p ${MODULEFILES_DIR}/hifiasm
+
+# 5. Write the modulefile definition
+#cat << EOF > ${MODULEFILES_DIR}/hifiasm/${VERSION}
+# #%Module
+#prepend-path PATH ${SOFTWARE_BASE}/hifiasm/${VERSION}
+#EOF
+
+# 6. Add your personal module path to the current shell
+#module use ${MODULEFILES_DIR}
+
+# 7. Load your new module to use it
+#module load hifiasm/${VERSION}
+##########################################################################
+##########################################################################
+
+cd /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly
+
+hifiasm -o maple_grove.asm \
+  -t 36 \
+  --h1 ./DovetailOmniC/DovetailOmniC/DTG-OmniC-232_R1_001.fastq.gz \ 
+  --h2 ./DovetailOmniC/DovetailOmniC/DTG-OmniC-232_R2_001.fastq.gz \ 
+  maple_grove.hifi_reads.fasta.gz \
+  > ./hifiasm_MapleGrove_log.txt 2>&1
+
