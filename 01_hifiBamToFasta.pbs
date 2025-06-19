@@ -14,5 +14,5 @@
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate pbtk-env
 
-# Convert HiFi bam to fasta
-bam2fasta -o /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/maple_grove.hifi_reads.fasta.gz --num-threads 64 /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/HudsonAlphaHiFi/m84238_250613_002528_s3.hifi_reads.bam
+# Convert HiFi bam to fasta (generates output with .fasta.gz)
+bam2fasta -o /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/maple_grove.hifi_reads --num-threads 64 /mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly/HudsonAlphaHiFi/m84238_250613_002528_s3.hifi_reads.bam
