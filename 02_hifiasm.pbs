@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -q beta
-#PBS -l select=1:ncpus=36:mem=1509GB
+#PBS -l select=1:ncpus=64:mem=500GB
 #PBS -l walltime=168:00:00
 #PBS -W group_list=x-ccast-prj-hulke
 #PBS -N HifiasmMapleGroveAssembly
@@ -42,9 +42,9 @@ echo "Custom hifiasm module loaded."
 echo "Starting Hifiasm assembly with Hi-C scaffolding..."
 
 hifiasm -o maple_grove.asm \
-  -t 36 \
-  --h1 ./DovetailOmniC/DTG-OmniC-232_R1_001.fastq.gz \ 
-  --h2 ./DovetailOmniC/DTG-OmniC-232_R2_001.fastq.gz \ 
+  -t 64 \
+  --h1 ./DovetailOmniC/DTG-OmniC-232_R1_001.fastq.gz \
+  --h2 ./DovetailOmniC/DTG-OmniC-232_R2_001.fastq.gz \
   maple_grove.hifi_reads.fasta.gz
   
 echo "Hifiasm run complete."
