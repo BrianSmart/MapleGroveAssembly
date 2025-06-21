@@ -7,7 +7,23 @@
 #PBS -j oe
 
 # --- ONE-TIME SETUP INSTRUCTIONS (for reproducibility) ---
-# See previous scripts for details on creating a custom module for hifiasm.
+# The following commands detail how to set up the custom hifiasm module.
+# This only needs to be done once, not for every run.
+# 1. Define variables for version and paths
+#    VERSION="0.25.0-r726"
+#    SOFTWARE_BASE="/mmfs1/projects/brent.hulke/software"
+#    MODULEFILES_DIR="${SOFTWARE_BASE}/modulefiles"
+# 2. Create a clean, versioned directory for the executable
+#    mkdir -p ${SOFTWARE_BASE}/hifiasm/${VERSION}
+# 3. Copy the hifiasm executable into the new versioned directory
+#    cp ${SOFTWARE_BASE}/hifiasm/hifiasm ${SOFTWARE_BASE}/hifiasm/${VERSION}/
+# 4. Create the directory structure for the modulefile
+#    mkdir -p ${MODULEFILES_DIR}/hifiasm
+# 5. Write the modulefile definition
+#    cat << EOF > ${MODULEFILES_DIR}/hifiasm/${VERSION}
+#    #%Module
+#    prepend-path PATH ${SOFTWARE_BASE}/hifiasm/${VERSION}
+#    EOF
 # --- END OF SETUP INSTRUCTIONS ---
 
 # --- SCRIPT EXECUTION ---
