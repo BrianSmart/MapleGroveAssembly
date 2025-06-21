@@ -31,11 +31,19 @@ echo "Started at: $(date)"
 
 # --- ENVIRONMENT SETUP ---
 # Activate the conda environment for GenomeScope
-# This environment contains R and all necessary packages
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate genomescope
 
 echo "GenomeScope environment activated."
+
+# ====================================================================
+# --- CONFIGURATION: EDIT THIS VARIABLE FOR A NEW PROJECT ---
+# ====================================================================
+
+# 1. Define the unique prefix for your current project.
+PROJECT_NAME="maple_grove"
+
+# ====================================================================
 
 # --- LOGGING ---
 # Print version used for assembly to a central log file in the base directory
@@ -45,20 +53,26 @@ printf "GenomeScope version used:\n" >> "${LOG_FILE}"
 genomescope2 --version >> "${LOG_FILE}" 2>&1
 
 # --- DEFINE FILE PATHS ---
-# Define input and output variables for clarity
-# Since we are inside the correct directory, these are just filenames.
-INPUT_HIST="hifi_kmers_k21.hist"
-OUTPUT_DIR="genomescope_output_k21"
+# Define input and output variables for clarity using the project name
+INPUT_HIST="${PROJECT_NAME}_hifi_kmers_k21.hist"
+OUTPUT_DIR="${PROJECT_NAME}_genomescope_output_k21"
+PLOT_TITLE="${PROJECT_NAME} HiFi k=21"
 
 # --- MAIN ANALYSIS COMMAND ---
-echo "Running GenomeScope2 on the k-mer histogram..."
+echo "Running GenomeScope2 for project: ${PROJECT_NAME}..."
+
+# Check if the input file exists before running
+if [ ! -f "${INPUT_HIST}" ]; then
+    echo "ERROR: Input histogram not found, skipping: ${INPUT_HIST}"
+    exit 1
+fi
 
 # The -o flag creates the output directory automatically.
 genomescope2 -i "${INPUT_HIST}" \
              -o "${OUTPUT_DIR}" \
              -p 2 \
              -k 21 \
-             -n "Maple Grove HiFi k=21" # Optional: Add a plot title
+             -n "${PLOT_TITLE}"
 
 echo "GenomeScope analysis complete."
 echo "Job finished at: $(date)"
