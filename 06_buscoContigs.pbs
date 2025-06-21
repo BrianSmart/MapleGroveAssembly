@@ -31,6 +31,19 @@ conda activate busco_env
 
 echo "BUSCO environment activated."
 
+# ====================================================================
+# --- CONFIGURATION: EDIT THESE VARIABLES FOR A NEW PROJECT ---
+# ====================================================================
+
+# 1. Define the unique prefix for your current project.
+PROJECT_NAME="maple_grove"
+
+# 2. Define the list of assembly types to process.
+#    The script will look for files like: maple_grove.asm.hic.p_ctg.fasta
+ASSEMBLY_SUFFIXES=("p_ctg" "hap1.p_ctg" "hap2.p_ctg")
+
+# ====================================================================
+
 # --- LOGGING ---
 # Print version used for assembly to a central log file in the base directory
 LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
@@ -38,24 +51,22 @@ printf "\n\n--- Step 06: BUSCO Analysis ---\n" >> "${LOG_FILE}"
 printf "BUSCO version used:\n" >> "${LOG_FILE}"
 busco --version >> "${LOG_FILE}" 2>&1
 
-# --- GLOBAL VARIABLES ---
+# --- GLOBAL VARIABLES (SHOULD NOT NEED TO BE EDITED) ---
 THREADS=${PBS_NP} # Use the PBS variable for number of cores
 LINEAGE_PATH="/mmfs1/projects/brent.hulke/software/busco_downloads/lineages/eudicots_odb10"
-
-# Define the input directory and the types of assemblies to process
 FASTA_DIR="${BASE_DIR}/05_gfastats"
-ASSEMBLY_TYPES=("p_ctg" "hap1.p_ctg" "hap2.p_ctg")
 
 # --- MAIN ANALYSIS COMMAND ---
-echo "Running BUSCO for all assemblies..."
+echo "Running BUSCO for project: ${PROJECT_NAME}..."
 
 # Loop through each assembly type and process it
-for ASM_TYPE in "${ASSEMBLY_TYPES[@]}"; do
+for ASM_SUFFIX in "${ASSEMBLY_SUFFIXES[@]}"; do
     # Define a clean name for this run (e.g., primary, hap1, hap2)
-    RUN_NAME=$(echo "${ASM_TYPE}" | sed 's/\.p_ctg//')
+    RUN_NAME=$(echo "${ASM_SUFFIX}" | sed 's/\.p_ctg//')
     
-    INPUT_FASTA="${FASTA_DIR}/maple_grove.asm.hic.${ASM_TYPE}.fasta"
-    OUTPUT_NAME="eudicots_${RUN_NAME}Contigs_odb10"
+    # Construct input and output names using variables
+    INPUT_FASTA="${FASTA_DIR}/${PROJECT_NAME}.asm.hic.${ASM_SUFFIX}.fasta"
+    OUTPUT_NAME="eudicots_${PROJECT_NAME}_${RUN_NAME}Contigs_odb10"
 
     echo "-------------------------------------"
     echo "Processing: ${INPUT_FASTA}"
