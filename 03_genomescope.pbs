@@ -1,0 +1,64 @@
+#!/bin/bash
+#PBS -q condo05
+#PBS -l select=1:ncpus=2:mem=16GB
+#PBS -l walltime=00:30:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N GenomeScope_MapleGrove
+#PBS -j oe
+
+# --- ONE-TIME SETUP for GenomeScope (for reproducibility) ---
+# The following command details how to install GenomeScope 2.0.
+# This only needs to be done once, not for every run.
+#
+# 1. Create a dedicated conda environment for GenomeScope.
+#    This automatically installs R and all required packages.
+#    conda create -n genomescope -c bioconda genomescope2
+# --- END OF SETUP INSTRUCTIONS ---
+
+# --- SCRIPT EXECUTION ---
+set -e
+set -o pipefail
+
+# Define the absolute base directory for the project for robustness
+BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
+
+# --- CHANGE: Change into the specific directory for this step's I/O ---
+# This step uses the output from Meryl, so we run it from the same directory.
+cd "${BASE_DIR}/02_03_meryl_genomescope"
+
+echo "Job running in directory: $(pwd)"
+echo "Started at: $(date)"
+
+# --- ENVIRONMENT SETUP ---
+# Activate the conda environment for GenomeScope
+# This environment contains R and all necessary packages
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate genomescope
+
+echo "GenomeScope environment activated."
+
+# --- LOGGING ---
+# Print version used for assembly to a central log file in the base directory
+LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
+printf "\n\n--- Step 03: GenomeScope Analysis ---\n" >> "${LOG_FILE}"
+printf "GenomeScope version used:\n" >> "${LOG_FILE}"
+genomescope2 --version >> "${LOG_FILE}" 2>&1
+
+# --- DEFINE FILE PATHS ---
+# Define input and output variables for clarity
+# Since we are inside the correct directory, these are just filenames.
+INPUT_HIST="hifi_kmers_k21.hist"
+OUTPUT_DIR="genomescope_output_k21"
+
+# --- MAIN ANALYSIS COMMAND ---
+echo "Running GenomeScope2 on the k-mer histogram..."
+
+# The -o flag creates the output directory automatically.
+genomescope2 -i "${INPUT_HIST}" \
+             -o "${OUTPUT_DIR}" \
+             -p 2 \
+             -k 21 \
+             -n "Maple Grove HiFi k=21" # Optional: Add a plot title
+
+echo "GenomeScope analysis complete."
+echo "Job finished at: $(date)"

@@ -1,0 +1,76 @@
+#!/bin/bash
+#PBS -q condo05
+#PBS -l select=1:ncpus=64:mem=500GB
+#PBS -l walltime=168:00:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N HifiasmMapleGroveAssembly
+#PBS -j oe
+
+# --- ONE-TIME SETUP INSTRUCTIONS (for reproducibility) ---
+# The following commands detail how to set up the custom hifiasm module.
+# This only needs to be done once, not for every run.
+# 1. Define variables for version and paths
+#    VERSION="0.25.0-r726"
+#    SOFTWARE_BASE="/mmfs1/projects/brent.hulke/software"
+#    MODULEFILES_DIR="${SOFTWARE_BASE}/modulefiles"
+# 2. Create a clean, versioned directory for the executable
+#    mkdir -p ${SOFTWARE_BASE}/hifiasm/${VERSION}
+# 3. Copy the hifiasm executable into the new versioned directory
+#    cp ${SOFTWARE_BASE}/hifiasm/hifiasm ${SOFTWARE_BASE}/hifiasm/${VERSION}/
+# 4. Create the directory structure for the modulefile
+#    mkdir -p ${MODULEFILES_DIR}/hifiasm
+# 5. Write the modulefile definition
+#    cat << EOF > ${MODULEFILES_DIR}/hifiasm/${VERSION}
+#    #%Module
+#    prepend-path PATH ${SOFTWARE_BASE}/hifiasm/${VERSION}
+#    EOF
+# --- END OF SETUP INSTRUCTIONS ---
+
+# --- SCRIPT EXECUTION ---
+set -e
+set -o pipefail
+
+# Define the absolute base directory for the project for robustness
+BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
+
+# --- CHANGE: Change into the specific directory for this step's output ---
+cd "${BASE_DIR}/04_hifiasm"
+
+echo "Job running in directory: $(pwd)"
+echo "Started at: $(date)"
+
+# --- ENVIRONMENT SETUP ---
+# Load your custom hifiasm module
+module load hifiasm/0.25.0-r726
+echo "Custom hifiasm module loaded."
+
+# --- LOGGING ---
+# Print version used for assembly to a central log file in the base directory
+LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
+printf "\n\n--- Step 04: Hifiasm Assembly ---\n" >> "${LOG_FILE}"
+printf "Hifiasm version used:\n" >> "${LOG_FILE}"
+hifiasm --version >> "${LOG_FILE}" 2>&1
+
+# --- DEFINE FILE PATHS ---
+# Define input and output variables for clarity
+HIFI_READS="${BASE_DIR}/01_hifiBamToFasta/maple_grove.hifi_reads.fasta.gz"
+# Note: The original script had a 'DovetailOmniC' subdirectory, which I've kept.
+# Please verify if this is correct. If your HiC files are directly in 'rawdata', remove 'DovetailOmniC/' from these paths.
+HIC_R1="${BASE_DIR}/rawdata/DovetailOmniC/DTG-OmniC-232_R1_001.fastq.gz"
+HIC_R2="${BASE_DIR}/rawdata/DovetailOmniC/DTG-OmniC-232_R2_001.fastq.gz"
+OUTPUT_PREFIX="maple_grove.asm"
+
+# --- Main Assembly Command ---
+echo "Starting Hifiasm assembly with Hi-C scaffolding..."
+echo "Using HiFi reads: ${HIFI_READS}"
+echo "Using Hi-C R1: ${HIC_R1}"
+echo "Using Hi-C R2: ${HIC_R2}"
+
+hifiasm -o "${OUTPUT_PREFIX}" \
+  -t 64 \
+  --h1 "${HIC_R1}" \
+  --h2 "${HIC_R2}" \
+  "${HIFI_READS}"
+
+echo "Hifiasm run complete."
+echo "Job finished at: $(date)"

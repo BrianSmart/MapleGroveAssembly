@@ -1,0 +1,81 @@
+#!/bin/bash
+#PBS -q condo05
+#PBS -l select=1:ncpus=64:mem=500GB
+#PBS -l walltime=168:00:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N MerylRawHifi
+#PBS -j oe
+
+# --- ONE-TIME SETUP INSTRUCTIONS for Meryl (for reproducibility) ---
+# The following commands detail how to set up the custom meryl module.
+# This only needs to be done once, not for every run.
+#
+# 1. Navigate to the software directory and unpack the meryl binary release.
+#    cd /mmfs1/projects/brent.hulke/software
+#    tar -xvf meryl-1.4.1.Linux-amd64.tar.xz
+#
+# 2. Define variables for version and paths.
+#    VERSION="1.4.1"
+#    SOFTWARE_BASE="/mmfs1/projects/brent.hulke/software"
+#    MODULEFILES_DIR="${SOFTWARE_BASE}/modulefiles"
+#    MERYL_HOME="${SOFTWARE_BASE}/meryl-${VERSION}"
+#
+# 3. Create the directory structure for the modulefile.
+#    mkdir -p ${MODULEFILES_DIR}/meryl
+#
+# 4. Write the modulefile definition.
+#    Note: This updates both the executable PATH and the library path LD_LIBRARY_PATH.
+#    cat << EOF > ${MODULEFILES_DIR}/meryl/${VERSION}
+#    #%Module
+#
+#    # Modulefile for meryl version ${VERSION}
+#
+#    # Add the 'bin' directory to the user's executable search path
+#    prepend-path PATH ${MERYL_HOME}/bin
+#
+#    # Add the 'lib' directory to the user's library search path
+#    prepend-path LD_LIBRARY_PATH ${MERYL_HOME}/lib
+#    EOF
+# --- END OF SETUP INSTRUCTIONS ---
+
+# --- SCRIPT EXECUTION ---
+set -e
+set -o pipefail
+
+# Define the absolute base directory for the project for robustness
+BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
+
+# --- CHANGE: Change into the specific directory for this step's output ---
+cd "${BASE_DIR}/02_03_meryl_genomescope"
+
+echo "Job running in directory: $(pwd)"
+echo "Started at: $(date)"
+
+# --- ENVIRONMENT SETUP ---
+# Load the meryl software.
+module load meryl/1.4.1
+
+# --- LOGGING ---
+# Print version used for assembly to a central log file in the base directory
+LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
+printf "\n\n--- Step 02: Meryl K-mer Counting ---\n" >> "${LOG_FILE}"
+printf "Meryl version used:\n" >> "${LOG_FILE}"
+meryl --version >> "${LOG_FILE}" 2>&1
+
+# --- DEFINE FILE PATHS ---
+# Define input and output variables for clarity
+INPUT_FASTA="${BASE_DIR}/01_hifiBamToFasta/maple_grove.hifi_reads.fasta.gz"
+OUTPUT_MERYL_DB="hifi_kmers_k21.meryl"
+OUTPUT_HIST="hifi_kmers_k21.hist"
+
+# --- MAIN ANALYSIS ---
+# Count all the 21-mers from the HiFi reads.
+echo "Counting k-mers with Meryl..."
+meryl count k=21 threads=64 memory=500g output "${OUTPUT_MERYL_DB}" "${INPUT_FASTA}"
+
+# Use the 'histogram' command to create the text file for GenomeScope
+echo "Generating k-mer histogram..."
+meryl histogram "${OUTPUT_MERYL_DB}" > "${OUTPUT_HIST}"
+
+echo "Meryl steps complete."
+echo "Job finished at: $(date)"

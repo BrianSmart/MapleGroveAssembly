@@ -1,0 +1,75 @@
+#!/bin/bash
+#PBS -q condo05
+#PBS -l select=1:ncpus=64:mem=500GB
+#PBS -l walltime=168:00:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N MerquryContigs
+#PBS -j oe
+
+# --- ONE-TIME SETUP for Merqury (for reproducibility) ---
+#    conda create -n merqury_env -c bioconda merqury
+# --- END OF SETUP INSTRUCTIONS ---
+
+# --- SCRIPT EXECUTION ---
+set -e
+set -o pipefail
+
+# Define the absolute base directory for the project for robustness
+BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
+
+# --- CHANGE: Change into the specific directory for this step's output ---
+cd "${BASE_DIR}/07_merquryContigs"
+
+echo "Job running in directory: $(pwd)"
+echo "Started at: $(date)"
+
+# --- ENVIRONMENT SETUP ---
+# Activate the conda environment for Merqury
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate merqury_env
+echo "Merqury environment activated."
+
+# Check that the MERQURY environment variable is set
+if [ -z "$MERQURY" ]; then
+    echo "ERROR: The '$MERQURY' environment variable is not set."
+    echo "Please set it to the location of your Merqury installation."
+    exit 1
+fi
+
+# --- LOGGING ---
+# Print version used for assembly to a central log file in the base directory
+LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
+printf "\n\n--- Step 07: Merqury Assembly Evaluation ---\n" >> "${LOG_FILE}"
+printf "Merqury version used:\n1.3\n" >> "${LOG_FILE}"
+
+# --- MAIN ANALYSIS COMMAND ---
+# Create the logs directory that merqury.sh expects
+mkdir -p logs
+
+# --- Define paths to input files ---
+MERYL_DB="${BASE_DIR}/02_03_meryl_genomescope/hifi_kmers_k21.meryl"
+HAP1_FASTA="${BASE_DIR}/05_gfastats/maple_grove.asm.hic.hap1.p_ctg.fasta"
+HAP2_FASTA="${BASE_DIR}/05_gfastats/maple_grove.asm.hic.hap2.p_ctg.fasta"
+PRIMARY_FASTA="${BASE_DIR}/05_gfastats/maple_grove.asm.hic.p_ctg.fasta"
+
+# --- Run 1: Haplotype Comparison ---
+echo "----------------------------------------------------"
+echo "Running Merqury on Hap1 vs Hap2..."
+$MERQURY/merqury.sh \
+  "${MERYL_DB}" \
+  "${HAP1_FASTA}" \
+  "${HAP2_FASTA}" \
+  "maple_grove.asm.hic.hap1And2Contigs"
+
+echo "Haplotype comparison complete."
+echo "----------------------------------------------------"
+
+# --- Run 2: Primary Assembly Analysis ---
+echo "Running Merqury on Primary Contigs..."
+$MERQURY/merqury.sh \
+  "${MERYL_DB}" \
+  "${PRIMARY_FASTA}" \
+  "maple_grove.asm.hic.primaryContigs"
+
+echo "Primary assembly analysis complete."
+echo "Job finished at: $(date)"

@@ -1,0 +1,50 @@
+#!/bin/bash
+#PBS -q condo05
+#PBS -l select=1:ncpus=64:mem=500GB
+#PBS -l walltime=168:00:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N HiFiBamToFasta
+#PBS -j oe
+
+# In order for this script to run, "conda create -n pbtk-env -c bioconda pbtk" has to be run previously.
+# From hifiasm: "Input sequences should be FASTA or FASTQ format, uncompressed or compressed with gzip (.gz).
+# The quality scores of reads in FASTQ are ignored by hifiasm. Hifiasm outputs assemblies in GFA format."
+# As a result, bam2fasta was used instead of bam2fastq from pbtk.
+
+# --- SCRIPT EXECUTION ---
+set -e
+set -o pipefail
+
+# Define the absolute base directory for the project for robustness
+BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
+
+# --- CHANGE: Change into the specific directory for this step's output ---
+cd "${BASE_DIR}/01_hifiBamToFasta"
+
+echo "Job running in directory: $(pwd)"
+echo "Started at: $(date)"
+
+# --- ENVIRONMENT SETUP ---
+# Activate pbtk environment
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate pbtk-env
+
+# --- LOGGING ---
+# Print version used for assembly to a central log file in the base directory
+# The '>>' operator will create the file if it doesn't exist.
+LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
+printf "\n\n--- Step 01: HiFi Bam to Fasta ---\n" >> "${LOG_FILE}"
+printf "bam2fasta version used:\n" >> "${LOG_FILE}"
+bam2fasta --version >> "${LOG_FILE}" 2>&1
+
+# --- MAIN ANALYSIS ---
+# Convert HiFi bam to fasta
+# Input path now uses the absolute path via BASE_DIR.
+# Output path is now relative to the current directory (01_hifiBamToFasta).
+echo "Converting HiFi BAM to gzipped FASTA..."
+bam2fasta -o maple_grove.hifi_reads.fasta.gz \
+    --num-threads 64 \
+    "${BASE_DIR}/rawdata/m84238_250613_002528_s3.hifi_reads.bam"
+
+echo "Conversion complete."
+echo "Job finished at: $(date)"

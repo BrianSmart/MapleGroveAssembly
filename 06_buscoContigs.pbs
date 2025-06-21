@@ -1,0 +1,80 @@
+#!/bin/bash
+#PBS -q condo05
+#PBS -l select=1:ncpus=64:mem=500GB
+#PBS -l walltime=168:00:00
+#PBS -W group_list=x-ccast-prj-hulke
+#PBS -N BuscoContigs
+#PBS -j oe
+
+# --- ONE-TIME SETUP for Busco (for reproducibility) ---
+# 1. Create a dedicated conda environment for Busco.
+#    conda create -n busco_env -c bioconda busco
+# --- END OF SETUP INSTRUCTIONS ---
+
+# --- SCRIPT EXECUTION ---
+set -e
+set -o pipefail
+
+# Define the absolute base directory for the project for robustness
+BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
+
+# --- CHANGE: Change into the specific directory for this step's output ---
+cd "${BASE_DIR}/06_buscoContigs"
+
+echo "Job running in directory: $(pwd)"
+echo "Started at: $(date)"
+
+# --- ENVIRONMENT SETUP ---
+# Activate the conda environment for BUSCO
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate busco_env
+
+echo "BUSCO environment activated."
+
+# --- LOGGING ---
+# Print version used for assembly to a central log file in the base directory
+LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
+printf "\n\n--- Step 06: BUSCO Analysis ---\n" >> "${LOG_FILE}"
+printf "BUSCO version used:\n" >> "${LOG_FILE}"
+busco --version >> "${LOG_FILE}" 2>&1
+
+# --- GLOBAL VARIABLES ---
+THREADS=${PBS_NP} # Use the PBS variable for number of cores
+LINEAGE_PATH="/mmfs1/projects/brent.hulke/software/busco_downloads/lineages/eudicots_odb10"
+
+# Define the input directory and the types of assemblies to process
+FASTA_DIR="${BASE_DIR}/05_gfastats"
+ASSEMBLY_TYPES=("p_ctg" "hap1.p_ctg" "hap2.p_ctg")
+
+# --- MAIN ANALYSIS COMMAND ---
+echo "Running BUSCO for all assemblies..."
+
+# Loop through each assembly type and process it
+for ASM_TYPE in "${ASSEMBLY_TYPES[@]}"; do
+    # Define a clean name for this run (e.g., primary, hap1, hap2)
+    RUN_NAME=$(echo "${ASM_TYPE}" | sed 's/\.p_ctg//')
+    
+    INPUT_FASTA="${FASTA_DIR}/maple_grove.asm.hic.${ASM_TYPE}.fasta"
+    OUTPUT_NAME="eudicots_${RUN_NAME}Contigs_odb10"
+
+    echo "-------------------------------------"
+    echo "Processing: ${INPUT_FASTA}"
+    
+    # Check if the input file exists before running
+    if [ ! -f "${INPUT_FASTA}" ]; then
+        echo "WARNING: Input file not found, skipping: ${INPUT_FASTA}"
+        continue
+    fi
+
+    busco -i "${INPUT_FASTA}" \
+          -m genome \
+          -c ${THREADS} \
+          -l "${LINEAGE_PATH}" \
+          --offline \
+          -o "${OUTPUT_NAME}" \
+          --force # Use --force to allow overwriting of a previous failed run
+
+done
+
+echo "All BUSCO runs complete."
+echo "Job finished at: $(date)"
