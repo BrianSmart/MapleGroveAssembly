@@ -6,131 +6,113 @@
 #PBS -N ContactMatrixContigs
 #PBS -j oe
 
-# --- ONE-TIME SETUP INSTRUCTIONS for pairtools (for reproducibility) ---
-# conda create -n pairtools_pretext_env -c conda-forge -c bioconda pairtools pretext-suite
-
-# --- ONE-TIME SETUP INSTRUCTIONS for bwa-mem2 (for reproducibility) ---
-# See previous scripts for details on creating a custom module.
-
 # --- SCRIPT EXECUTION ---
 set -e
 set -o pipefail
-
-# Define the absolute base directory for the project for robustness
+# Define the absolute base directory for the project
 BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
-
-# --- CHANGE: Change into the specific directory for this step's output ---
-cd "${BASE_DIR}/08_contactMatrixContigs"
+cd "${BASE_DIR}"
 
 echo "Job running in directory: $(pwd)"
 echo "Started at: $(date)"
 
 # --- ENVIRONMENT SETUP ---
-# Activate the conda environment for pairtools and load modules
 module load samtools/1.20
 module load bwa-mem2/2.2.1
-
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate pairtools_pretext_env
+echo "Environment activated."
 
-echo "Pairtools environment activated and samtools and bwa-mem2 modules loaded."
+# ====================================================================
+# --- CONFIGURATION: EDIT THESE VARIABLES FOR A NEW PROJECT ---
+# ====================================================================
 
-# --- LOGGING ---
-LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
-printf "\n\n--- Step 08: Hi-C Contact Matrix Generation ---\n" >> "${LOG_FILE}"
-printf "samtools version:\n" >> "${LOG_FILE}"
-samtools --version >> "${LOG_FILE}"
-printf "\nbwa-mem2 version:\n" >> "${LOG_FILE}"
-bwa-mem2 version >> "${LOG_FILE}" 2>&1
-printf "\npairtools version:\n" >> "${LOG_FILE}"
-pairtools --version >> "${LOG_FILE}" 2>&1
+# 1. Define the unique prefix for your current project.
+PROJECT_NAME="maple_grove"
 
-# --- GLOBAL VARIABLES ---
-THREADS=${PBS_NP} # Use PBS variable for number of cores
-TMP_DIR="tmp"
-HIC_R1="${BASE_DIR}/rawdata/DTG-OmniC-232_R1_001.fastq.gz"
-HIC_R2="${BASE_DIR}/rawdata/DTG-OmniC-232_R2_001.fastq.gz"
+# 2. Define the list of assembly types to process.
+#    The script will look for files like: maple_grove.asm.hic.p_ctg.fasta
+ASSEMBLY_SUFFIXES=("asm.hic.p_ctg" "asm.hic.hap1.p_ctg" "asm.hic.hap2.p_ctg")
 
-# Create necessary temporary directory inside the output folder
+# ====================================================================
+
+# --- GLOBAL VARIABLES (SHOULD NOT NEED TO BE EDITED) ---
+THREADS=${PBS_NP}
+MAIN_OUT_DIR="08_contactMatrixContigs"
+TMP_DIR="${MAIN_OUT_DIR}/tmp"
+HIC_R1="rawdata/DTG-OmniC-232_R1_001.fastq.gz"
+HIC_R2="rawdata/DTG-OmniC-232_R2_001.fastq.gz"
+
+# Create necessary base directories
+mkdir -p "${MAIN_OUT_DIR}"
 mkdir -p "${TMP_DIR}"
 
 # --- MAIN ANALYSIS COMMAND ---
-echo "Running contact matrix pipeline..."
+echo "Running contact matrix pipeline for project: ${PROJECT_NAME}"
 
-# Define the prefixes for the assemblies we want to process
-HAPLOTYPES=("maple_grove.asm.hic.p_ctg" "maple_grove.asm.hic.hap1.p_ctg" "maple_grove.asm.hic.hap2.p_ctg")
-
-# Loop through each assembly
-for HAP_PREFIX in "${HAPLOTYPES[@]}"; do
+# Loop through each assembly type
+for ASM_SUFFIX in "${ASSEMBLY_SUFFIXES[@]}"; do
+    HAP_PREFIX="${PROJECT_NAME}.${ASM_SUFFIX}"
+    
     echo "----------------------------------------------------"
-    echo "Processing haplotype: ${HAP_PREFIX}"
+    echo "Processing assembly: ${HAP_PREFIX}"
     echo "----------------------------------------------------"
 
     # --- Define file paths for this specific haplotype ---
-    # Inputs use absolute paths; outputs are relative to the current directory
     ASM_FASTA="${BASE_DIR}/05_gfastats/${HAP_PREFIX}.fasta"
-    ASM_GENOME="${HAP_PREFIX}.genome"
-    ALIGNED_SAM="${HAP_PREFIX}_alignedToHiC.sam"
-    PARSED_PAIRSAM="${HAP_PREFIX}_alignedToHiC_parsed.pairsam"
-    SORTED_PAIRSAM="${HAP_PREFIX}_alignedToHiC_sorted.pairsam"
-    DEDUP_STATS="${HAP_PREFIX}_alignedToHiC_pairtools_stats.txt"
-    DEDUP_PAIRSAM="${HAP_PREFIX}_alignedToHiC_dedup.pairsam"
-    MAPPED_PAIRS="${HAP_PREFIX}_alignedToHiC_mapped.pairs"
-    UNSORTED_BAM="${HAP_PREFIX}_alignedToHiC_unsorted.bam"
-    FINAL_BAM="${HAP_PREFIX}_mappedToHiC.PT.bam"
-    PRETEXT_MAP="${HAP_PREFIX}_hic_pretext"
-    
+    ASM_GENOME="${MAIN_OUT_DIR}/${HAP_PREFIX}.genome"
+    ALIGNED_SAM="${MAIN_OUT_DIR}/${HAP_PREFIX}_alignedToHiC.sam"
+    PARSED_PAIRSAM="${MAIN_OUT_DIR}/${HAP_PREFIX}_alignedToHiC_parsed.pairsam"
+    SORTED_PAIRSAM="${MAIN_OUT_DIR}/${HAP_PREFIX}_alignedToHiC_sorted.pairsam"
+    DEDUP_STATS="${MAIN_OUT_DIR}/${HAP_PREFIX}_alignedToHiC_pairtools_stats.txt"
+    DEDUP_PAIRSAM="${MAIN_OUT_DIR}/${HAP_PREFIX}_alignedToHiC_dedup.pairsam"
+    MAPPED_PAIRS="${MAIN_OUT_DIR}/${HAP_PREFIX}_alignedToHiC_mapped.pairs"
+    UNSORTED_BAM="${MAIN_OUT_DIR}/${HAP_PREFIX}_alignedToHiC_unsorted.bam"
+    FINAL_BAM="${MAIN_OUT_DIR}/${HAP_PREFIX}_mappedToHiC.PT.bam"
+    PRETEXT_MAP="${MAIN_OUT_DIR}/${HAP_PREFIX}_hic_pretext"
+    SNAPSHOT_OUT_PREFIX="${MAIN_OUT_DIR}/${HAP_PREFIX}_hic_pretext_snapshot"
+
     # --- Step 1: Prepare Assembly Files ---
     echo "Step 1: Indexing assembly ${ASM_FASTA}..."
-    if [ ! -f "${ASM_FASTA}" ]; then echo "ERROR: Input FASTA not found: ${ASM_FASTA}"; exit 1; fi
+    if [ ! -f "${ASM_FASTA}" ]; then echo "ERROR: Input FASTA not found: ${ASM_FASTA}"; continue; fi
     samtools faidx "${ASM_FASTA}"
     cut -f1,2 "${ASM_FASTA}.fai" > "${ASM_GENOME}"
     bwa-mem2 index "${ASM_FASTA}"
 
     # --- Step 2: Align Hi-C Reads ---
-    echo "Step 2: Aligning Hi-C reads with BWA-MEM2..."
+    echo "Step 2: Aligning Hi-C reads..."
     bwa-mem2 mem -5SP -T0 -t ${THREADS} "${ASM_FASTA}" "${HIC_R1}" "${HIC_R2}" > "${ALIGNED_SAM}"
 
-    # --- Step 3: Parse and Sort with Pairtools ---
-    echo "Step 3a: Parsing SAM file with pairtools..."
+    # --- Step 3-5: Pairtools and Samtools processing ---
+    echo "Step 3a: Parsing SAM file..."
     pairtools parse --min-mapq 40 --walks-policy 5unique --max-inter-align-gap 30 --nproc-in ${THREADS} --nproc-out ${THREADS} --chroms-path "${ASM_GENOME}" "${ALIGNED_SAM}" > "${PARSED_PAIRSAM}"
-
     echo "Step 3b: Sorting pairsam..."
     pairtools sort --tmpdir="${TMP_DIR}" --nproc ${THREADS} "${PARSED_PAIRSAM}" > "${SORTED_PAIRSAM}"
-
-    # --- Step 4: Deduplicate Pairs ---
-    echo "Step 4: Marking duplicates with pairtools..."
+    echo "Step 4: Marking duplicates..."
     pairtools dedup --nproc-in ${THREADS} --nproc-out ${THREADS} --mark-dups --output-stats "${DEDUP_STATS}" --output "${DEDUP_PAIRSAM}" "${SORTED_PAIRSAM}"
-
-    # --- Step 5: Split and Generate Final BAM ---
-    echo "Step 5a: Splitting pairsam file..."
+    echo "Step 5a: Splitting pairsam..."
     pairtools split --nproc-in ${THREADS} --nproc-out ${THREADS} --output-pairs "${MAPPED_PAIRS}" --output-sam "${UNSORTED_BAM}" "${DEDUP_PAIRSAM}"
-
     echo "Step 5b: Sorting final BAM..."
     samtools sort -@ ${THREADS} -T "${TMP_DIR}/${HAP_PREFIX}_tmp" -o "${FINAL_BAM}" "${UNSORTED_BAM}"
-
     echo "Step 5c: Indexing final BAM..."
     samtools index "${FINAL_BAM}"
 
     # --- Step 6: Generate and Visualize Contact Map ---
     echo "Step 6a: Generating PretextMap data..."
     samtools view -h "${FINAL_BAM}" | PretextMap -o "${PRETEXT_MAP}" --sortby nosort --mapq 10
-
     echo "Step 6b: Creating PretextMap snapshot..."
-    # This will create a directory named e.g., 'maple_grove.asm.hic.p_ctg_hic_pretext_snapshots/'
-    # inside the current folder (08_contactMatrixContigs)
-    PretextSnapshot -m "${PRETEXT_MAP}" --sequences FullMap
+    PretextSnapshot -m "${PRETEXT_MAP}" --sequences FullMap -o "${SNAPSHOT_OUT_PREFIX}"
     
     echo "--- Finished processing ${HAP_PREFIX} ---"
 done
 
-# Clean up large intermediate files to save space
+# --- Final Cleanup ---
 echo "Cleaning up intermediate files..."
-rm -f ./*_alignedToHiC.sam
-rm -f ./*_alignedToHiC_parsed.pairsam
-rm -f ./*_alignedToHiC_sorted.pairsam
-rm -f ./*_alignedToHiC_dedup.pairsam
-rm -f ./*_alignedToHiC_unsorted.bam
+rm -f ${MAIN_OUT_DIR}/*_alignedToHiC.sam
+rm -f ${MAIN_OUT_DIR}/*_alignedToHiC_parsed.pairsam
+rm -f ${MAIN_OUT_DIR}/*_alignedToHiC_sorted.pairsam
+rm -f ${MAIN_OUT_DIR}/*_alignedToHiC_dedup.pairsam
+rm -f ${MAIN_OUT_DIR}/*_alignedToHiC_unsorted.bam
 rm -rf "${TMP_DIR}"
 
 echo "All steps complete."
