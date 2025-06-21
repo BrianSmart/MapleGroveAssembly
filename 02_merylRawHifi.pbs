@@ -45,7 +45,7 @@ set -o pipefail
 # Define the absolute base directory for the project for robustness
 BASE_DIR="/mmfs1/projects/brent.hulke/FLAX/Maple_Grove_Assembly"
 
-# --- CHANGE: Change into the specific directory for this step's output ---
+# --- CHANGE: Change into the specific directory for this step's I/O ---
 cd "${BASE_DIR}/02_03_meryl_genomescope"
 
 echo "Job running in directory: $(pwd)"
@@ -55,6 +55,15 @@ echo "Started at: $(date)"
 # Load the meryl software.
 module load meryl/1.4.1
 
+# ====================================================================
+# --- CONFIGURATION: EDIT THIS VARIABLE FOR A NEW PROJECT ---
+# ====================================================================
+
+# 1. Define the unique prefix for your current project.
+PROJECT_NAME="maple_grove"
+
+# ====================================================================
+
 # --- LOGGING ---
 # Print version used for assembly to a central log file in the base directory
 LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
@@ -63,15 +72,20 @@ printf "Meryl version used:\n" >> "${LOG_FILE}"
 meryl --version >> "${LOG_FILE}" 2>&1
 
 # --- DEFINE FILE PATHS ---
-# Define input and output variables for clarity
-INPUT_FASTA="${BASE_DIR}/01_hifiBamToFasta/maple_grove.hifi_reads.fasta.gz"
-OUTPUT_MERYL_DB="hifi_kmers_k21.meryl"
-OUTPUT_HIST="hifi_kmers_k21.hist"
+# Define input and output variables for clarity using the project name
+INPUT_FASTA="${BASE_DIR}/01_hifiBamToFasta/${PROJECT_NAME}.hifi_reads.fasta.gz"
+OUTPUT_MERYL_DB="${PROJECT_NAME}_hifi_kmers_k21.meryl"
+OUTPUT_HIST="${PROJECT_NAME}_hifi_kmers_k21.hist"
 
 # --- MAIN ANALYSIS ---
-# Count all the 21-mers from the HiFi reads.
-echo "Counting k-mers with Meryl..."
-meryl count k=21 threads=64 memory=500g output "${OUTPUT_MERYL_DB}" "${INPUT_FASTA}"
+echo "Counting k-mers with Meryl for project: ${PROJECT_NAME}..."
+# Check if the input file exists before running
+if [ ! -f "${INPUT_FASTA}" ]; then
+    echo "ERROR: Input FASTA not found, skipping: ${INPUT_FASTA}"
+    exit 1
+fi
+
+meryl count k=21 threads=${PBS_NP} memory=500g output "${OUTPUT_MERYL_DB}" "${INPUT_FASTA}"
 
 # Use the 'histogram' command to create the text file for GenomeScope
 echo "Generating k-mer histogram..."
