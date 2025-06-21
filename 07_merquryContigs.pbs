@@ -24,7 +24,6 @@ echo "Job running in directory: $(pwd)"
 echo "Started at: $(date)"
 
 # --- ENVIRONMENT SETUP ---
-# Activate the conda environment for Merqury
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate merqury_env
 echo "Merqury environment activated."
@@ -36,6 +35,15 @@ if [ -z "$MERQURY" ]; then
     exit 1
 fi
 
+# ====================================================================
+# --- CONFIGURATION: EDIT THESE VARIABLES FOR A NEW PROJECT ---
+# ====================================================================
+
+# 1. Define the unique prefix for your current project.
+PROJECT_NAME="maple_grove"
+
+# ====================================================================
+
 # --- LOGGING ---
 # Print version used for assembly to a central log file in the base directory
 LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
@@ -46,30 +54,48 @@ printf "Merqury version used:\n1.3\n" >> "${LOG_FILE}"
 # Create the logs directory that merqury.sh expects
 mkdir -p logs
 
-# --- Define paths to input files ---
+# --- Define paths to input files using variables ---
 MERYL_DB="${BASE_DIR}/02_03_meryl_genomescope/hifi_kmers_k21.meryl"
-HAP1_FASTA="${BASE_DIR}/05_gfastats/maple_grove.asm.hic.hap1.p_ctg.fasta"
-HAP2_FASTA="${BASE_DIR}/05_gfastats/maple_grove.asm.hic.hap2.p_ctg.fasta"
-PRIMARY_FASTA="${BASE_DIR}/05_gfastats/maple_grove.asm.hic.p_ctg.fasta"
+HAP1_FASTA="${BASE_DIR}/05_gfastats/${PROJECT_NAME}.asm.hic.hap1.p_ctg.fasta"
+HAP2_FASTA="${BASE_DIR}/05_gfastats/${PROJECT_NAME}.asm.hic.hap2.p_ctg.fasta"
+PRIMARY_FASTA="${BASE_DIR}/05_gfastats/${PROJECT_NAME}.asm.hic.p_ctg.fasta"
 
 # --- Run 1: Haplotype Comparison ---
 echo "----------------------------------------------------"
 echo "Running Merqury on Hap1 vs Hap2..."
+# Define the output prefix for the haplotype run
+HAP_OUT_PREFIX="${PROJECT_NAME}.asm.hic.hap1And2Contigs"
+
+# Check if required input files exist
+if [ ! -f "${HAP1_FASTA}" ] || [ ! -f "${HAP2_FASTA}" ]; then
+    echo "ERROR: Haplotype FASTA files not found. Exiting."
+    exit 1
+fi
+
 $MERQURY/merqury.sh \
   "${MERYL_DB}" \
   "${HAP1_FASTA}" \
   "${HAP2_FASTA}" \
-  "maple_grove.asm.hic.hap1And2Contigs"
+  "${HAP_OUT_PREFIX}"
 
 echo "Haplotype comparison complete."
 echo "----------------------------------------------------"
 
 # --- Run 2: Primary Assembly Analysis ---
 echo "Running Merqury on Primary Contigs..."
+# Define the output prefix for the primary run
+PRIMARY_OUT_PREFIX="${PROJECT_NAME}.asm.hic.primaryContigs"
+
+# Check if required input file exists
+if [ ! -f "${PRIMARY_FASTA}" ]; then
+    echo "ERROR: Primary FASTA file not found. Exiting."
+    exit 1
+fi
+
 $MERQURY/merqury.sh \
   "${MERYL_DB}" \
   "${PRIMARY_FASTA}" \
-  "maple_grove.asm.hic.primaryContigs"
+  "${PRIMARY_OUT_PREFIX}"
 
 echo "Primary assembly analysis complete."
 echo "Job finished at: $(date)"
