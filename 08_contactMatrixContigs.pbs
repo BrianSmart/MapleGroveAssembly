@@ -6,6 +6,41 @@
 #PBS -N ContactMatrixContigs
 #PBS -j oe
 
+# --- ONE-TIME SETUP INSTRUCTIONS for pairtools (for reproducibility) ---
+# conda create -n pairtools_pretext_env -c conda-forge -c bioconda pairtools pretext-suite
+
+# --- ONE-TIME SETUP INSTRUCTIONS for bwa-mem2 (for reproducibility) ---
+# The following commands detail how to set up the custom bwa-mem2 module.
+# This only needs to be done once, not for every run.
+#
+# NOTE: This guide assumes the bwa-mem2 binaries are already present in
+# /mmfs1/projects/brent.hulke/software/bwa-mem2 from a previous build or download.
+#
+# 1. Define variables for version and paths.
+#    VERSION="2.2.1"
+#    SOFTWARE_BASE="/mmfs1/projects/brent.hulke/software"
+#    MODULEFILES_DIR="${SOFTWARE_BASE}/modulefiles"
+#    BWAMEM2_HOME="${SOFTWARE_BASE}/bwa-mem2"
+#
+# 2. Create the directory structure for the modulefile.
+#    mkdir -p ${MODULEFILES_DIR}/bwa-mem2
+#
+# 3. Write the modulefile definition using a 'here document'.
+#    Note: This updates the executable PATH. The bwa-mem2 binaries are
+#    located directly in the main directory, not a separate 'bin' folder.
+#    cat << EOF > ${MODULEFILES_DIR}/bwa-mem2/${VERSION}
+#    #%Module
+#    # Modulefile for bwa-mem2 version ${VERSION}
+#    # Add the main software directory to the user's executable search path
+#    prepend-path PATH ${BWAMEM2_HOME}
+#    EOF
+#
+# 4. (Optional but Recommended) Add your custom module path to your shell's startup file.
+#    This makes your custom modules available automatically every time you log in.
+#    echo 'module use /mmfs1/projects/brent.hulke/software/modulefiles' >> ~/.bashrc
+#
+# --- END OF SETUP INSTRUCTIONS ---
+
 # --- SCRIPT EXECUTION ---
 set -e
 set -o pipefail
