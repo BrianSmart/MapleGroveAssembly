@@ -7,23 +7,7 @@
 #PBS -j oe
 
 # --- ONE-TIME SETUP INSTRUCTIONS (for reproducibility) ---
-# The following commands detail how to set up the custom gfastats module.
-# This only needs to be done once, not for every run.
-# 1. Define variables for version and paths
-#    VERSION="1.3.7"
-#    SOFTWARE_BASE="/mmfs1/projects/brent.hulke/software"
-#    MODULEFILES_DIR="${SOFTWARE_BASE}/modulefiles"
-# 2. Create a clean, versioned directory for the executable
-#    mkdir -p ${SOFTWARE_BASE}/gfastats/${VERSION}
-# 3. Copy the gfastats executable into the new versioned directory
-#    cp ${SOFTWARE_BASE}/gfastats/gfastats ${SOFTWARE_BASE}/gfastats/${VERSION}/
-# 4. Create the directory structure for the modulefile
-#    mkdir -p ${MODULEFILES_DIR}/gfastats
-# 5. Write the modulefile definition
-#    cat << EOF > ${MODULEFILES_DIR}/gfastats/${VERSION}
-#    #%Module
-#    prepend-path PATH ${SOFTWARE_BASE}/gfastats/${VERSION}
-#    EOF
+# See previous scripts for details on creating a custom module for gfastats.
 # --- END OF SETUP INSTRUCTIONS ---
 
 # --- SCRIPT EXECUTION ---
@@ -43,6 +27,19 @@ echo "Started at: $(date)"
 module load gfastats/1.3.7
 echo "Custom gfastats module loaded."
 
+# ====================================================================
+# --- CONFIGURATION: EDIT THESE VARIABLES FOR A NEW PROJECT ---
+# ====================================================================
+
+# 1. Define the unique prefix for your current project.
+PROJECT_NAME="maple_grove"
+
+# 2. Define the list of assembly types to process.
+#    The script will look for GFA files like: maple_grove.asm.hic.p_ctg.gfa
+ASSEMBLY_SUFFIXES=("p_ctg" "hap1.p_ctg" "hap2.p_ctg")
+
+# ====================================================================
+
 # --- LOGGING ---
 # Print version used for assembly to a central log file in the base directory
 LOG_FILE="${BASE_DIR}/fileVersionsForAssembly.txt"
@@ -50,17 +47,17 @@ printf "\n\n--- Step 05: GFA to FASTA Conversion ---\n" >> "${LOG_FILE}"
 printf "gfastats version used:\n" >> "${LOG_FILE}"
 gfastats --version >> "${LOG_FILE}" 2>&1
 
-# --- MAIN STATISTICS COMMANDS ---
-echo "Starting all gfastats jobs..."
-
-# Define the input directory and the types of assemblies to process
+# --- GLOBAL VARIABLES (SHOULD NOT NEED TO BE EDITED) ---
 GFA_DIR="${BASE_DIR}/04_hifiasm"
-ASSEMBLY_TYPES=("p_ctg" "hap1.p_ctg" "hap2.p_ctg")
+
+# --- MAIN STATISTICS COMMANDS ---
+echo "Starting all gfastats jobs for project: ${PROJECT_NAME}..."
 
 # Loop through each assembly type and process it
-for ASM_TYPE in "${ASSEMBLY_TYPES[@]}"; do
-    INPUT_GFA="${GFA_DIR}/maple_grove.asm.hic.${ASM_TYPE}.gfa"
-    OUTPUT_FASTA="maple_grove.asm.hic.${ASM_TYPE}.fasta"
+for ASM_SUFFIX in "${ASSEMBLY_SUFFIXES[@]}"; do
+    # Construct input and output names using variables
+    INPUT_GFA="${GFA_DIR}/${PROJECT_NAME}.asm.hic.${ASM_SUFFIX}.gfa"
+    OUTPUT_FASTA="${PROJECT_NAME}.asm.hic.${ASM_SUFFIX}.fasta"
     
     echo "-------------------------------------"
     echo "Processing: ${INPUT_GFA}"
